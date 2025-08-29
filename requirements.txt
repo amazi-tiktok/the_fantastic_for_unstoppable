@@ -1,2 +1,5 @@
 kagglehub
 pandas
+torch>=1.7.0
+detoxify
+numpy<2
