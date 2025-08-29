@@ -8,27 +8,29 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from nltk.corpus import stopwords
 import nltk
 import numpy as np # Needed for keyword extraction logic
+from sentence_transformers import SentenceTransformer
+from sklearn.cluster import AgglomerativeClustering
 
 # --- Configuration ---
 METADATA_FILE = './data/meta-Alabama.json.gz' # Adjust if your file has a different name
 REVIEWS_FILE = './data/review-Alabama.json.gz' # Adjust if your file has a different name
 OUTPUT_DIR = './data/category_reviews' # Directory to save category-specific review OBJECT files
 KEYWORDS_DIR = './data/category_keywords' # Directory to save extracted keywords
-MAX_TFIDF_KEYWORDS = 30
+MAX_TFIDF_KEYWORDS = 35
 TEXT_COLUMN_IN_REVIEWS = 'text'
 CATEGORY_KEY_IN_METADATA = 'category' 
 GMAP_ID_KEY_IN_METADATA = 'gmap_id'
 GMAP_ID_KEY_IN_REVIEWS = 'gmap_id'
+ALL_CATEGORIES_SUMMARY_FILE = 'all_categories_summary.json'
 N_LINES_PREVIEW = 100 # Lines to read for initial inspection/progress
 # Number of reviews to load for keyword extraction.
 # For keyword extraction, we need a decent amount per category.
 # Set this higher if your category files are empty after loading the first few lines.
-N_LINES_FOR_KEYWORDS = 200000 # Load up to 200000 reviews per category for TF-IDF
+N_LINES_FOR_KEYWORDS = 1000000 # Load up to 1000000 reviews per category for TF-IDF
 
 # --- Setup ---
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs(KEYWORDS_DIR, exist_ok=True)
-
 
 nltk.download('stopwords')
 stop_words = set(stopwords.words('english'))
@@ -73,9 +75,14 @@ def read_json_lines(filepath, limit=None):
         print(f"Error reading {filepath}: {e}")
         return None
 
-# --- Phase 1: Data Loading, Categorization, and Creating Category Review OBJECT Files ---
+def normalize_category_name(cat_name):
+    """Cleans category name for use as filename/key."""
+    if not isinstance(cat_name, str): return ""
+    cat_name = cat_name.lower().replace(' ', '_').replace('&', 'and').replace('.', '')
+    return re.sub(r'[^\w\-]+', '_', cat_name)
 
-def process_data_for_categories_with_objects(metadata_filepath, reviews_filepath, output_dir, category_key, gmap_id_meta_key, gmap_id_review_key, text_review_key, review_limit_per_category_for_tf_idf):
+# --- Phase 1: Data Loading, Categorization, and Creating Category Review OBJECT Files ---
+def process_data_for_categories_with_objects(metadata_filepath, reviews_filepath, output_dir, category_key, gmap_id_meta_key, gmap_id_review_key, text_review_key, review_limit_per_category_for_tf_idf, max_reviews_per_file):
     """
     Loads metadata and reviews, groups *entire review objects* by category,
     and saves them to category-specific JSON Lines files.
@@ -145,7 +152,7 @@ def process_data_for_categories_with_objects(metadata_filepath, reviews_filepath
             # Iterate through each review object for this business
             for _, review_item in business_reviews_group.iterrows():
                 # Only add the review if it has the text field
-                if text_review_key in review_item and review_item[text_review_key]:
+                if text_review_key in review_item and review_item[text_review_key] and len(category_review_objects[normalized_cat]) < max_reviews_per_file:
                     # Pre-clean the text here if you want to save cleaned text
                     # For now, we save the raw object, cleaning is for TF-IDF later
                     category_review_objects[normalized_cat].append(review_item.to_dict())
@@ -170,9 +177,7 @@ def process_data_for_categories_with_objects(metadata_filepath, reviews_filepath
 
         try:
             with open(category_filepath, 'w', encoding='utf-8') as f:
-                for obj in review_objects:
-                    json.dump(obj, f) # Dump the entire review object
-                    f.write('\n')
+                json.dump(review_objects, f)
             print(f"  Saved {len(review_objects)} review objects for category '{category}' to {category_filepath}")
         except Exception as e:
             print(f"Error saving review objects for category '{category}': {e}")
@@ -180,113 +185,225 @@ def process_data_for_categories_with_objects(metadata_filepath, reviews_filepath
     print("\nPhase 1 complete. Category-specific review OBJECT files created.")
     return category_files_map # Return dictionary of {category: filepath}
 
-# --- Phase 2: Keyword Extraction per Category ---
 
-def extract_keywords_per_category(category_files_map, keywords_dir, max_keywords=30, text_key_in_obj='text'):
+def process_and_merge_categories(category_files_folder, keywords_dir, num_target_categories, max_keywords_per_category, text_key_in_obj='text', num_reviews_for_tfidf=5000, bias_threshold=30):
     """
-    Loads category-specific review OBJECT files, extracts review text,
-    and then extracts keywords using TF-IDF.
+    Reads category JSONL files from a folder, extracts keywords for each,
+    and then merges categories based on name+keywords using clustering.
     """
-    if not category_files_map:
-        print("No category files provided for keyword extraction. Skipping Phase 2.")
-        return {}
+    skipped_categories = []
+    if not os.path.isdir(category_files_folder):
+        print(f"Error: Category files folder not found at '{category_files_folder}'. Please ensure it exists.")
+        return None
 
-    print("\n--- Phase 2: Extracting Keywords per Category ---")
-    all_category_keywords = {} # Store keywords for all categories
+    print(f"\n--- Processing Category Files from: {category_files_folder} ---")
+    
+    all_category_keywords = {} # Stores {category_name: [keywords]}
+    category_files_map = {} # Store {category_name: filepath}
 
-    for category, filepath in category_files_map.items():
-        print(f"\nProcessing category for keywords: '{category}'")
-        if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
-            print(f"  File not found or empty: {filepath}. Skipping keyword extraction.")
+    # --- Part 1: Extract Keywords for each category ---
+    print("--- Part 1: Extracting Keywords per Category ---")
+
+    # Get all .json files from the specified folder
+    category_filenames = [f for f in os.listdir(category_files_folder) if f.endswith('.json')]
+    
+    if not category_filenames:
+        print(f"No '.json' files found in '{category_files_folder}'. Please check the folder.")
+        return None
+    
+    print(f"Found {len(category_filenames)} category files.")
+
+    for filename in category_filenames:
+        filepath = os.path.join(category_files_folder, filename)
+        # Filename itself is the category name (after removing extension)
+        category_name = normalize_category_name(filename.replace('.json', ''))
+
+        # Load review OBJECTS for TF-IDF
+        category_data_objects = json.load(open(filepath))
+        if len(category_data_objects) < bias_threshold:
+            skipped_categories.append(category_name)
+            print(f"  There are too little review objects in '{filename}'. Skipping.")
             continue
-
-        # Load review OBJECTS for this category
-        category_data_objects = read_json_lines(filepath, limit=N_LINES_FOR_KEYWORDS) # Use limit for keyword extraction
-        if category_data_objects is None: continue
-        
-        # Extract JUST the cleaned text for TF-IDF
         review_texts_for_tfidf = []
         for obj in category_data_objects:
             review_text = obj.get(text_key_in_obj)
             if review_text:
-                cleaned_text = clean_text_for_tfidf(review_text) # Clean specifically for TF-IDF
+                cleaned_text = clean_text_for_tfidf(review_text)
                 if cleaned_text:
                     review_texts_for_tfidf.append(cleaned_text)
         
         if not review_texts_for_tfidf:
-            print(f"  No valid review texts found for keyword extraction in category '{category}'. Skipping.")
+            print(f"  No valid review texts found for keyword extraction in '{category_name}'. Skipping.")
             continue
             
         print(f"  Loaded {len(review_texts_for_tfidf)} cleaned reviews for TF-IDF.")
 
-        # Initialize TF-IDF Vectorizer
+        # TF-IDF Vectorization
         tfidf_vectorizer = TfidfVectorizer(max_features=5000, ngram_range=(1, 2))
-        
         try:
             tfidf_matrix = tfidf_vectorizer.fit_transform(review_texts_for_tfidf)
             feature_names = tfidf_vectorizer.get_feature_names_out()
-            
-            # Calculate term scores (sum of TF-IDF across all docs for that term)
             term_scores = np.array(tfidf_matrix.sum(axis=0)).flatten()
-            
-            # Get indices sorted by score (descending)
             sorted_indices = np.argsort(term_scores)[::-1]
             
-            # Get the top N keywords
-            top_keywords = [feature_names[i] for i in sorted_indices[:max_keywords]]
-            
-            all_category_keywords[category] = top_keywords
-            print(f"  Extracted top {len(top_keywords)} keywords: {top_keywords}")
+            top_keywords = [feature_names[i] for i in sorted_indices[:max_keywords_per_category]]
+            all_category_keywords[category_name] = top_keywords # Store with original filename category name
+            print(f"  Extracted top {len(top_keywords)} keywords: {top_keywords[:5]}...")
 
-            # Save keywords to a file
-            keyword_filename = f"{category}_keywords.txt"
+            # Save keywords
+            safe_cat_name = normalize_category_name(category_name)
+            keyword_filename = f"{safe_cat_name}_keywords.txt"
             keyword_filepath = os.path.join(keywords_dir, keyword_filename)
             with open(keyword_filepath, 'w', encoding='utf-8') as f:
-                for keyword in top_keywords:
-                    f.write(keyword + '\n')
+                for kw in top_keywords: f.write(kw + '\n')
             print(f"  Saved keywords to {keyword_filepath}")
 
-        except Exception as e:
-            print(f"Error processing keywords for category '{category}': {e}")
+            # Store filepath for Phase 2 clustering
+            category_files_map[category_name] = filepath 
 
-    print("\nPhase 2 complete. Keywords extracted and saved.")
-    return all_category_keywords
+        except Exception as e:
+            print(f"Error processing keywords for category '{category_name}': {e}")
+
+    if not all_category_keywords:
+        print("No keywords were extracted for any category. Cannot proceed with merging.")
+        return None
+
+    # --- Part B: Cluster Categories based on Name + Keywords ---
+    print(f"\n--- Part B: Clustering Categories into {num_target_categories} groups ---")
+
+    category_names = list(all_category_keywords.keys())
+    category_representations = []
+    for category in category_names:
+        keywords = all_category_keywords.get(category, [])
+        # Create representation: Category Name + Keywords
+        representation = f"{category.replace('_', ' ')} " + " ".join(keywords[:max_keywords_per_category])
+        category_representations.append(representation)
+
+    print(f"Created representations for {len(category_representations)} categories.")
+
+    # Load Sentence-BERT model
+    print("Generating Sentence-BERT embeddings for category representations...")
+    try:
+        model = SentenceTransformer('all-MiniLM-L6-v2') 
+        category_embeddings = model.encode(category_representations, show_progress_bar=True)
+        print(f"Generated embeddings of shape: {category_embeddings.shape}")
+    except Exception as e:
+        print(f"Error generating embeddings: {e}")
+        return None
+
+    # Cluster the embeddings
+    print(f"Clustering categories using Agglomerative Clustering into {num_target_categories} groups...")
+    try:
+        clustering_model = AgglomerativeClustering(
+            n_clusters=num_target_categories,
+            metric='cosine', 
+            linkage='average'
+        )
+        cluster_labels = clustering_model.fit_predict(category_embeddings)
+        print("Clustering complete.")
+    except ValueError as ve:
+        print(f"Clustering error: {ve}.")
+        return None
+    except Exception as e:
+        print(f"Unexpected clustering error: {e}")
+        return None
+
+    # Group original categories by cluster labels and find representatives
+    consolidated_categories = defaultdict(list)
+    for i, cluster_id in enumerate(cluster_labels):
+        original_category = category_names[i]
+        consolidated_categories[cluster_id].append(original_category)
+
+    cluster_representatives = {}
+    for cluster_id, original_categories in consolidated_categories.items():
+        if not original_categories: continue
+        
+        indices_in_cluster = [category_names.index(cat) for cat in original_categories]
+        embeddings_in_cluster = category_embeddings[indices_in_cluster]
+        
+        if len(embeddings_in_cluster) > 1:
+            centroid = np.mean(embeddings_in_cluster, axis=0)
+            distances = np.linalg.norm(embeddings_in_cluster - centroid, axis=1)
+            closest_embedding_index_in_cluster = np.argmin(distances)
+        else:
+            closest_embedding_index_in_cluster = 0
+        
+        representative_category = original_categories[closest_embedding_index_in_cluster]
+        clean_representative_name = representative_category.replace('_', ' ').title()
+        
+        cluster_representatives[cluster_id] = {
+            "representative_name": clean_representative_name,
+            "original_category_count": len(original_categories),
+            "original_categories": original_categories
+        }
+
+    sorted_clusters = sorted(cluster_representatives.items(), key=lambda item: item[1]['original_category_count'], reverse=True)
+
+    print(f"\n--- Top 10 Largest Consolidated Categories (out of {len(sorted_clusters)}) ---")
+    for i, (cluster_id, data) in enumerate(sorted_clusters[:10]):
+        print(f"{i+1}. Representative: '{data['representative_name']}' "
+              f"(from {data['original_category_count']} original categories)")
+
+    # Save the final mapping
+    final_mapping = {
+        "num_clusters": len(sorted_clusters),
+        "clusters": [
+            {
+                "representative_name": data["representative_name"],
+                "original_category_count": data["original_category_count"],
+                "original_categories": data["original_categories"]
+            }
+            for cluster_id, data in sorted_clusters
+        ],
+        "skipped_categories": skipped_categories
+    }
+    
+    output_filename = ALL_CATEGORIES_SUMMARY_FILE
+    try:
+        with open(output_filename, 'w', encoding='utf-8') as f:
+            json.dump(final_mapping, f, indent=2)
+        print(f"\nFinal consolidated category mapping saved to: {output_filename}")
+    except Exception as e:
+        print(f"Error saving final category mapping: {e}")
+
+    return final_mapping
 
 # --- Main Execution ---
 if __name__ == "__main__":
     current_dir = os.getcwd()
     metadata_path = os.path.join(current_dir, METADATA_FILE)
     reviews_path = os.path.join(current_dir, REVIEWS_FILE)
-
+    cfg = {
+        "execute_phase_1": False,
+        "execute_phase_2": True,
+    }
     # --- Phase 1 Execution ---
-    category_review_files_map = process_data_for_categories_with_objects(
-        metadata_filepath=metadata_path,
-        reviews_filepath=reviews_path,
-        output_dir=OUTPUT_DIR,
-        category_key=CATEGORY_KEY_IN_METADATA,
-        gmap_id_meta_key=GMAP_ID_KEY_IN_METADATA,
-        gmap_id_review_key=GMAP_ID_KEY_IN_REVIEWS,
-        text_review_key=TEXT_COLUMN_IN_REVIEWS,
-        review_limit_per_category_for_tf_idf=N_LINES_FOR_KEYWORDS # Pass the limit here
-    )
+    if cfg["execute_phase_1"]:
+      category_review_files_map = process_data_for_categories_with_objects(
+          metadata_filepath=metadata_path,
+          reviews_filepath=reviews_path,
+          output_dir=OUTPUT_DIR,
+          category_key=CATEGORY_KEY_IN_METADATA,
+          gmap_id_meta_key=GMAP_ID_KEY_IN_METADATA,
+          gmap_id_review_key=GMAP_ID_KEY_IN_REVIEWS,
+          text_review_key=TEXT_COLUMN_IN_REVIEWS,
+          review_limit_per_category_for_tf_idf=N_LINES_FOR_KEYWORDS,  # Pass the limit here
+          max_reviews_per_file=1000  # Limit to 1000 reviews per category file
+      )
 
+    # open the json file inside ./data/category_reviews one by one, and dump reviews after 1000 reviews
+    # dump_reviews_after_n(OUTPUT_DIR, NEW_OUTPUT_DIR, 1000)
     # --- Phase 2 Execution ---
-    if category_review_files_map:
-        all_extracted_keywords = extract_keywords_per_category(
-            category_files_map=category_review_files_map,
-            keywords_dir=KEYWORDS_DIR,
-            max_keywords=MAX_TFIDF_KEYWORDS,
-            text_key_in_obj=TEXT_COLUMN_IN_REVIEWS # Pass the key to get text from objects
-        )
-        
-        print("\n--- Process Summary ---")
-        print(f"Category review OBJECT files saved in: {os.path.abspath(OUTPUT_DIR)}")
-        print(f"Category keyword files saved in: {os.path.abspath(KEYWORDS_DIR)}")
-        if all_extracted_keywords:
-            print("\nKeywords extracted for categories (first 5 shown):")
-            for cat, kws in all_extracted_keywords.items():
-                print(f" - {cat}: {kws[:5]}...")
+    if cfg["execute_phase_2"]:
+        result = process_and_merge_categories(OUTPUT_DIR, KEYWORDS_DIR, 100, MAX_TFIDF_KEYWORDS, TEXT_COLUMN_IN_REVIEWS, N_LINES_FOR_KEYWORDS)
+        if result:
+            print("Phase 2 executed successfully.")
         else:
-            print("No keywords were extracted.")
+            print("Phase 2 failed, please check the logs for more details.")
     else:
-        print("\nSkipping Phase 2 due to issues in Phase 1.")
+        print("Skipping Phase 2 as it is disabled in the configuration.")
+
+    # here for phrase 3, we need to manually review the all_categories_summary.json file and correct it, in order to get an accurate representation of the categories and their relationships.
+    # This may involve merging similar categories, renaming them for clarity, or removing duplicates.
+    # The goal is to create a final, clean mapping of categories that can be used for training the model.
+

@@ -12,7 +12,6 @@ import nltk
 import json
 import os
 
-
 def detect_policy_violation(cfg, text):
     # use detoxify to classify the comment to understand whether it is toxic
     # this cover the policy for example: hate speech, harassment, etc.
@@ -29,7 +28,6 @@ def detect_policy_violation(cfg, text):
       
     # we need to detect off-topic comments
     # TODO: implement off-topic comment detection
-
 
     # we need to detect images that are not allowed
     # TODO: implement image detection

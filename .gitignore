@@ -193,5 +193,7 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
-./data/meta-Alabama.json.gz
-./data/review-Alabama.json.gz
+data/meta-Alabama.json.gz
+data/review-Alabama.json.gz
+data/category_reviews_tmp/*
+data/category_keywords/*

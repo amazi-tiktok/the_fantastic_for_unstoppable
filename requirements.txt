@@ -8,3 +8,5 @@ transformers
 nltk 
 datasets 
 tensorflow
+sentence_transformers
+tf-keras
