@@ -39,10 +39,10 @@ def classify_review_with_category(review_text: str, store_category: str):
         hypothesis_template="This review is about {}."
     )
     violations = []
-    if result['scores'][0] < 0.7:
-        violations.append("Low confidence in category relevance")
+    if result['scores'][0] < 0.8:
+        violations.append("Low confidence in relevance between image and category")
 
-    return result['scores'][0], violations
+    return 1- result['scores'][0], violations
 
 # -------------------------
 # Step 2: NSFW image detection

@@ -245,7 +245,6 @@ class ReviewAnalyzer:
         # Run all policy analyses
         ad_score, ad_violations = self.analyze_advertisement(text)
         relevancy_score, relevancy_violations = self.analyze_relevancy(text, store_info)
-        print("Relevancy Score:", relevancy_score, "Violations:", relevancy_violations)
         visit_score, visit_violations = self.analyze_visit_authenticity(text, rating)
         quality_score, quality_violations = self.calculate_quality_score(review_data, store_info)
         image_score, image_violations = self.analyze_image(image_url, store_info)
