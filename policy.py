@@ -9,12 +9,9 @@ from io import BytesIO
 # change to a better model, here it is used because of desktop limitation
 classifier = pipeline("zero-shot-classification", model="typeform/distilbert-base-uncased-mnli")
 
-# const variables
-promo_keywords = [
-    'discount', 'coupon', 'promo', 'sale', 'visit www', 
-    'http', '.com', 'offer', 'deal', 'free shipping',
-    'buy now', 'limited time', 'special offer'
-]
+# Load the small NSFW detection model once (fast and light)
+nsfw_processor = AutoImageProcessor.from_pretrained("Falconsai/nsfw_image_detection")
+nsfw_model = AutoModelForImageClassification.from_pretrained("Falconsai/nsfw_image_detection")
 
 # -------------------------
 # Step 0: Heuristic checks
@@ -52,35 +49,6 @@ def classify_review_with_category(review_text: str, store_category: str):
 # Step 2: NSFW image detection
 # -------------------------
 
-# clip_model_id = "openai/clip-vit-base-patch32"
-# model = CLIPModel.from_pretrained(clip_model_id)
-# processor = CLIPProcessor.from_pretrained(clip_model_id)
-
-# # -------------------------
-# # Step 2: Define NSFW / Safe prompts
-# # -------------------------
-# nsfw_prompts = [
-#     "nude", 
-#     "sexually explicit", 
-#     "pornographic", 
-#     "erotic"
-# ]
-# safe_prompts = [
-#     "safe for work", 
-#     "clothed", 
-#     "normal photo", 
-#     "non-explicit"
-# ]
-
-
-# # -------------------------
-# # Step 3: CLIP-based NSFW detection
-# # -------------------------
-
-# Load the small NSFW detection model once (fast and light)
-nsfw_processor = AutoImageProcessor.from_pretrained("Falconsai/nsfw_image_detection")
-nsfw_model = AutoModelForImageClassification.from_pretrained("Falconsai/nsfw_image_detection")
-
 def analyze_nsfw_content(image_path_or_url: str, threshold: float = 0.5) -> bool:
     """
     Returns True if the image is likely NSFW.
@@ -93,63 +61,13 @@ def analyze_nsfw_content(image_path_or_url: str, threshold: float = 0.5) -> bool
     else:
         image = Image.open(image_path_or_url).convert("RGB")
     inputs = nsfw_processor(images=image, return_tensors="pt")
-    
+
     with torch.no_grad():
         outputs = nsfw_model(**inputs)
         logits = outputs.logits
         probs = torch.softmax(logits, dim=1)
         nsfw_prob = probs[0][1].item()  # Index 1 is NSFW, 0 is SFW
-    
-    violation = []
-    if nsfw_prob > threshold:
-        violation.append("Image content is NSFW")
-    
-    return nsfw_prob, violation
-
-#     inputs = processor(text=nsfw_prompts + safe_prompts, images=image, return_tensors="pt", padding=True)
-    
-#     with torch.no_grad():
-#         outputs = model(**inputs)
-    
-#     # similarity = image_emb @ text_emb.T
-#     image_embeds = outputs.image_embeds / outputs.image_embeds.norm(p=2, dim=-1, keepdim=True)
-#     text_embeds = outputs.text_embeds / outputs.text_embeds.norm(p=2, dim=-1, keepdim=True)
-    
-#     # cosine similarity
-#     similarity = torch.matmul(image_embeds, text_embeds.T).squeeze(0)
-    
-#     nsfw_scores = similarity[:len(nsfw_prompts)]
-#     safe_scores = similarity[len(nsfw_prompts):]
-    
-#     nsfw_score = nsfw_scores.mean().item()
-#     safe_score = safe_scores.mean().item()
-    
-#     # NSFW if NSFW similarity significantly higher than safe
-#     return (nsfw_score - safe_score) > threshold
-
-# # -------------------------
-# # Step 1: Load image captioning model (BLIP-2)
-# # -------------------------
-# caption_model_id = "Salesforce/blip2-opt-2.7b"
-
-# caption_processor = Blip2Processor.from_pretrained(caption_model_id)
-# caption_model = Blip2ForConditionalGeneration.from_pretrained(
-#     caption_model_id,
-#     device_map="auto",
-#     torch_dtype=torch.float16
-# )
-
-# def get_image_caption(image_path: str) -> str:
-#     image = Image.open(image_path).convert("RGB")
-#     inputs = caption_processor(images=image, return_tensors="pt").to(caption_model.device)
-#     output = caption_model.generate(**inputs, max_new_tokens=50)
-#     caption = caption_processor.decode(output[0], skip_special_tokens=True)
-#     return caption
-
-# # -------------------------
-# # Test the captioner
-# # -------------------------
-# print(get_image_caption("food_photo.jpg"))
+    return nsfw_prob
 
 # -------------------------
 # Step 2: Load text classifier (Mistral-7B-Instruct)

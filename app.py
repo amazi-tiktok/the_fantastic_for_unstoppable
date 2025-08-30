@@ -133,14 +133,14 @@ class ReviewAnalyzer:
         
         # Length checks
         word_count = len(text.split()) if text else 0
-        if word_count < 3:
+        if word_count == 0:
+            return 0, violations
+
+        word_count_score = min(word_count, 5)/5.0
+        if word_count <= 5:
             violations.append("Review too short to be meaningful")
-            return 0.8, violations
-        
-        if word_count == 1:
-            violations.append("Single-word review")
-            return 0.9, violations
-        
+            return 1-word_count_score, violations
+
         # Generic content detection
         generic_phrases = [
             'good place', 'nice location', 'okay place', 'fine', 
@@ -149,9 +149,10 @@ class ReviewAnalyzer:
         
         generic_count = sum(1 for phrase in generic_phrases if phrase in text.lower())
         if generic_count > 0 and word_count < 8:
+            word_count_score = min(generic_count, 8)/8.0
             violations.append("Generic or low-effort review")
-            quality_issues += 0.4
-        
+            quality_issues += (1 - word_count_score)/2
+
         # Repetitive content
         words = text.lower().split()
         if len(set(words)) < len(words) * 0.5 and word_count > 5:
@@ -228,19 +229,23 @@ class ReviewAnalyzer:
             if not has_image_ext and not any(service in url_lower for service in ['imgur', 'cloudinary', 'picsum', 'placeholder']):
                 violations.append("URL doesn't appear to point to an image file")
                 score += 0.2
-
-            # check for image content, whether it is NSFW or not
-            nsfw_score, nsfw_violations = analyze_nsfw_content(image_url)
-            if nsfw_score > 0.5:
-                violations.append("Image content is NSFW")
-                score += 0.8
-
         except Exception as e:
             violations.append(f"Error analyzing image URL: {str(e)}")
             score = 0.3
         
         return min(score, 1.0), violations
-    
+
+    def analyze_severe_causes(self, image_url: Optional[str],text: str) -> Tuple[float, List[str]]:
+        """Analyze the text for severe causes of concern."""
+        score = 0.0
+        violations = []
+
+        # check for image content, whether it is NSFW or not
+        nsfw_score = analyze_nsfw_content(image_url)
+        if nsfw_score > 0.5:
+            violations.append("Image content is NSFW")
+        return min(nsfw_score, 1.0), violations
+
     def analyze_review(self, review_data, store_info):
         """Main analysis function that combines all policy checks including image analysis"""
         text = review_data.get('text', '')
@@ -254,25 +259,27 @@ class ReviewAnalyzer:
         visit_score, visit_violations = self.analyze_visit_authenticity(text, rating)
         quality_score, quality_violations = self.calculate_quality_score(review_data, store_info)
         image_score, image_violations = self.analyze_image(image_url, store_info)
-        
+        severe_cause_score, severe_cause_violations = self.analyze_severe_causes(image_url, text)
         # Adjust weights based on whether image is provided
         if image_url:
             # When image is provided, use these weights
             weights = {
                 'advertisement': 0.25,
                 'relevancy': 0.2, 
-                'visit_authenticity': 0.2,
+                'visit_authenticity': 0.1,
                 'quality': 0.15,
-                'image_analysis': 0.2
+                'image_analysis': 0.1,
+                'severe_cause': 0.2
             }
         else:
             # When no image, redistribute the weight
             weights = {
                 'advertisement': 0.3,
-                'relevancy': 0.25, 
-                'visit_authenticity': 0.25,
+                'relevancy': 0.2, 
+                'visit_authenticity': 0.05,
                 'quality': 0.2,
-                'image_analysis': 0.0
+                'image_analysis': 0.0,
+                'severe_cause': 0.25
             }
         
         overall_score = (
@@ -280,9 +287,11 @@ class ReviewAnalyzer:
             relevancy_score * weights['relevancy'] + 
             visit_score * weights['visit_authenticity'] +
             quality_score * weights['quality'] +
-            image_score * weights['image_analysis']
+            image_score * weights['image_analysis'] +
+            severe_cause_score * weights['severe_cause']
         )
         
+        overall_score = max(overall_score, severe_cause_score)
         # Determine recommended action based on score thresholds
         if overall_score >= 0.7:
             action = "REMOVE"
@@ -315,6 +324,11 @@ class ReviewAnalyzer:
                 'score': round(quality_score, 3),
                 'violations': quality_violations,
                 'weight': weights['quality']
+            },
+            'severe_cause': {
+                'score': round(severe_cause_score, 3),
+                'violations': severe_cause_violations,
+                'weight': weights['severe_cause']
             }
         }
         
