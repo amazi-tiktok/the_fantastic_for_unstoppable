@@ -11,13 +11,13 @@ import nltk
 import json
 import time
 import os
-from policy import contains_personal_info, contains_profanity,classify_review_with_image 
+from policy import contains_commercial_info, contains_profanity,classify_review_with_image 
 
 def detect_policy_violation(category, text):
     # use detoxify to classify the comment to understand whether it is toxic
     # this cover the policy for example: hate speech, harassment, etc.
     # TODO: train our own model, based on the out put of the detoxify, then add some special cases of review. For example: the pizza is disgusting shouldn't be flagged as toxic, for the moment we just proceed with existing model
-    contains_personal_info(text)
+    contains_commercial_info(text)
 
     # we need to detect off-topic comments
     # TODO: implement off-topic comment detection
