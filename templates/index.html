@@ -394,8 +394,8 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="reviewerImage">Reviewer Profile Image URL (Optional)</label>
-                        <input type="url" id="reviewerImage" placeholder="https://picsum.photos/400">
+                        <label for="imageURL">Image inside review URL (Optional)</label>
+                        <input type="url" id="imageURL" placeholder="https://picsum.photos/400">
                     </div>
 
                     <div class="form-row">
@@ -525,7 +525,7 @@
         function loadExampleData() {
             document.getElementById('userName').value = 'Jordan Adams';
             document.getElementById('reviewText').value = 'Cool place, great people, awesome dentist!';
-            document.getElementById('reviewerImage').value = 'https://picsum.photos/400';
+            document.getElementById('imageURL').value = 'https://picsum.photos/400';
             document.getElementById('storeName').value = 'Walgreens Pharmacy';
             document.getElementById('storeDescription').value = 'Department of the Walgreens chain providing prescription medications & other health-related items.';
             document.getElementById('storeCategory').value = 'Pharmacy';
@@ -547,7 +547,7 @@
                 text: document.getElementById('reviewText').value,
                 rating: parseInt(document.getElementById('rating').value),
                 time: new Date(document.getElementById('reviewTime').value || new Date()).getTime(),
-                image_url: document.getElementById('reviewerImage').value
+                image_url: document.getElementById('imageURL').value
             };
             
             const storeInfo = {
@@ -633,6 +633,15 @@
                 
                 <div class="metadata-section">
                     <h4>📊 Analysis Metadata</h4>
+                    <div class="metadata-item" style="margin-bottom: 24px;">
+                        <div class="metadata-label">Image In Review</div>
+                        <div class="metadata-value">
+                            ${results.metadata.image_url ? 
+                            `<img src="${results.metadata.image_url}" style="width: 100px; height: 100px; object-fit: cover; display: block; margin-bottom: 12px;">` : 
+                            'No image provided'
+                            }
+                        </div>
+                    </div>
                     <div class="metadata-grid">
                         <div class="metadata-item">
                             <div class="metadata-label">GCOM ID</div>
@@ -645,15 +654,6 @@
                         <div class="metadata-item">
                             <div class="metadata-label">User Rating</div>
                             <div class="metadata-value">${results.metadata.rating}/5 ⭐</div>
-                        </div>
-                        <div class="metadata-item">
-                            <div class="metadata-label">Reviewer Image</div>
-                            <div class="metadata-value">
-                                ${results.metadata.reviewer_image_url ? 
-                                `<img src="${results.metadata.reviewer_image_url}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;" alt="Reviewer">` : 
-                                'No image provided'
-                                }
-                            </div>
                         </div>
                         <div class="metadata-item">
                             <div class="metadata-label">Analysis Time</div>
