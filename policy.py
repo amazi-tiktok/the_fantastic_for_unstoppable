@@ -87,10 +87,23 @@ def detect_insulting_content(review_text: str) -> Tuple[float, list]:
     insult_score = max(result['scores'][result['labels'].index("insulting")],
                        result['scores'][result['labels'].index("offensive")])
     violations = []
-    if insult_score > 0.7:
+    if insult_score > 0.5:
         violations.append("Review contains insulting or offensive language")
+    # we normalize the score, to avoid being too sensitive, 0.5 shouldn't be flagged?
     return insult_score, violations
 
 def detect_sentiment(review_text: str):
     result = sentiment_analyzer(review_text)[0]
     return result['label'], result['score']
+
+def classify_review_text_with_category(review_text: str, store_category: str, store_description: str) -> Tuple[float, list]:
+    candidate = f"{store_category}: {store_description}" if store_description else store_category
+    result = classifier(
+        review_text,
+        candidate_labels=[candidate, "other"],
+        hypothesis_template="This review is about {}."
+    )
+    violations = []
+    if result['scores'][0] < 0.8:
+        violations.append("Low confidence in relevance between review and category/description")
+    return 1 - result['scores'][0], violations

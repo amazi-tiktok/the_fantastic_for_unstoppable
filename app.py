@@ -2,7 +2,7 @@ from email.mime import text
 from flask import Flask, render_template, request, jsonify
 import re, csv, os
 from datetime import datetime
-from policy import contains_commercial_info, classify_review_image_with_category, detect_insulting_content, analyze_nsfw_content, detect_sentiment
+from policy import contains_commercial_info, classify_review_image_with_category, detect_insulting_content, analyze_nsfw_content, detect_sentiment, classify_review_text_with_category
 from typing import Dict, List, Tuple, Optional
 
 app = Flask(__name__)
@@ -84,6 +84,11 @@ class ReviewAnalyzer:
         if store_category.strip() == 'others':
             return 0, []
         score, violations = classify_review_image_with_category(review_text, store_category)
+
+        text_score, text_violations = classify_review_text_with_category(review_text, store_category, store_info.get('description', '').lower())
+        if text_score > score:
+            score = text_score
+            violations.extend(text_violations)
         return min(score, 1.0), violations
 
     def analyze_visit_authenticity(self, username, review_text, rating):
