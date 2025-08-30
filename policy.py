@@ -5,6 +5,7 @@ import torch
 from PIL import Image
 import requests
 from io import BytesIO
+from typing import Tuple
 
 # change to a better model, here it is used because of desktop limitation
 classifier = pipeline("zero-shot-classification", model="typeform/distilbert-base-uncased-mnli")
@@ -12,7 +13,7 @@ classifier = pipeline("zero-shot-classification", model="typeform/distilbert-bas
 # Load the small NSFW detection model once (fast and light)
 nsfw_processor = AutoImageProcessor.from_pretrained("Falconsai/nsfw_image_detection")
 nsfw_model = AutoModelForImageClassification.from_pretrained("Falconsai/nsfw_image_detection")
-
+sentiment_analyzer = pipeline("sentiment-analysis", model="distilbert-base-uncased-finetuned-sst-2-english")
 # -------------------------
 # Step 0: Heuristic checks
 # -------------------------
@@ -33,7 +34,10 @@ def contains_profanity(text: str) -> bool:
     bad_words = ["damn", "shit", "fuck", "bitch"]
     return any(word in text.lower() for word in bad_words)
 
-def classify_review_with_category(review_text: str, store_category: str):
+def classify_review_image_with_category(review_text: str, store_category: str):
+    """
+    Classify the review text with the store category and description.
+    """
     result = classifier(
         review_text,
         candidate_labels=[store_category, "other"],
@@ -68,3 +72,25 @@ def analyze_nsfw_content(image_path_or_url: str, threshold: float = 0.5) -> bool
         probs = torch.softmax(logits, dim=1)
         nsfw_prob = probs[0][1].item()  # Index 1 is NSFW, 0 is SFW
     return nsfw_prob
+
+def detect_insulting_content(review_text: str) -> Tuple[float, list]:
+    """
+    Uses zero-shot classification to detect if the review is insulting or offensive.
+    Returns a score (1 = very likely insulting, 0 = not insulting) and a list of violations.
+    """
+    result = classifier(
+        review_text,
+        candidate_labels=["insulting", "offensive", "polite", "neutral"],
+        hypothesis_template="This review is {}."
+    )
+    # Take the highest score for "insulting" or "offensive", it's value would be between 0 and 1, 1 means very likely insulting
+    insult_score = max(result['scores'][result['labels'].index("insulting")],
+                       result['scores'][result['labels'].index("offensive")])
+    violations = []
+    if insult_score > 0.7:
+        violations.append("Review contains insulting or offensive language")
+    return insult_score, violations
+
+def detect_sentiment(review_text: str):
+    result = sentiment_analyzer(review_text)[0]
+    return result['label'], result['score']

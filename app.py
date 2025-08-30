@@ -1,7 +1,8 @@
+from email.mime import text
 from flask import Flask, render_template, request, jsonify
 import re, csv, os
 from datetime import datetime
-from policy import contains_commercial_info, classify_review_with_category, analyze_nsfw_content
+from policy import contains_commercial_info, classify_review_image_with_category, detect_insulting_content, analyze_nsfw_content, detect_sentiment
 from typing import Dict, List, Tuple, Optional
 
 app = Flask(__name__)
@@ -79,10 +80,10 @@ class ReviewAnalyzer:
         if not review_text:
             return 0.8, ["Empty review text"]
             
-        # text_lower = review_text.lower()
         store_category = store_info.get('category', [''])[0].lower() if store_info.get('category') else ''
-
-        score, violations = classify_review_with_category(review_text, store_category)
+        if store_category.strip() == 'others':
+            return 0, []
+        score, violations = classify_review_image_with_category(review_text, store_category)
         return min(score, 1.0), violations
 
     def analyze_visit_authenticity(self, username, review_text, rating):
@@ -122,8 +123,7 @@ class ReviewAnalyzer:
 
         return min(score, 1.0), violations
 
-    
-    def calculate_quality_score(self, review_data, store_info):
+    def analyze_quality(self, review_data, store_info):
         """Assess overall review quality"""
         text = review_data.get('text', '')
         rating = review_data.get('rating', 3)
@@ -157,15 +157,30 @@ class ReviewAnalyzer:
         words = text.lower().split()
         if len(set(words)) < len(words) * 0.5 and word_count > 5:
             violations.append("Highly repetitive content")
-            quality_issues += 0.3
+            quality_issues += 0.1
         
         # All caps (shouting)
         if text.isupper() and len(text) > 10:
             violations.append("Excessive use of capital letters")
-            quality_issues += 0.2
-        
+            quality_issues += 0.1
+
+        # Sentiment-rating consistency
+        # Get sentiment label and score
+        sentiment_label, sentiment_score = detect_sentiment(text)
+
+        # Check for mismatch between sentiment and rating
+        if (sentiment_label == "POSITIVE" and rating <= 2) or (sentiment_label == "NEGATIVE" and rating >= 4):
+            violations.append(
+                f"Sentiment ({sentiment_label}) does not match star rating ({rating})"
+            )
+            quality_issues += 0.1
         return min(quality_issues, 1.0), violations
-    
+
+    def analyze_offensive(self, review_data):
+        text = review_data.get('text', '')
+        offensive_score, offensive_violations = detect_insulting_content(text)
+        return offensive_score, offensive_violations
+
     def analyze_image(self, image_url: Optional[str], store_info: Dict) -> Tuple[float, List[str]]:
         """
         Analyze review image URL for policy violations
@@ -254,26 +269,32 @@ class ReviewAnalyzer:
         ad_score, ad_violations = self.analyze_advertisement(text)
         relevancy_score, relevancy_violations = self.analyze_relevancy(text, store_info)
         visit_score, visit_violations = self.analyze_visit_authenticity(reviewer_name, text, rating)
-        quality_score, quality_violations = self.calculate_quality_score(review_data, store_info)
+        quality_score, quality_violations = self.analyze_quality(review_data, store_info)
         image_score, image_violations = self.analyze_image(image_url, store_info)
+
+        print("Image analysis score:", image_score, image_violations)
+        
+        offensive_score, offensive_violations = self.analyze_offensive(review_data)
         # Adjust weights based on whether image is provided
         if image_url:
             # When image is provided, use these weights
             weights = {
-                'advertisement': 0.25,
-                'relevancy': 0.25, 
-                'visit_authenticity': 0.20,
-                'quality': 0.15,
-                'image_analysis': 0.15
+                'advertisement': 0.2,
+                'relevancy': 0.15, 
+                'visit_authenticity': 0.1,
+                'quality': 0.1,
+                'image_analysis': 0.15,
+                'offensive': 0.3
             }
         else:
             # When no image, redistribute the weight
             weights = {
-                'advertisement': 0.3,
-                'relevancy': 0.25, 
-                'visit_authenticity': 0.20,
-                'quality': 0.25,
-                'image_analysis': 0.0
+                'advertisement': 0.2,
+                'relevancy': 0.2, 
+                'visit_authenticity': 0.2,
+                'quality': 0.1,
+                'image_analysis': 0.0,
+                'offensive': 0.3
             }
 
         overall_score = (
@@ -281,17 +302,19 @@ class ReviewAnalyzer:
             relevancy_score * weights['relevancy'] + 
             visit_score * weights['visit_authenticity'] +
             quality_score * weights['quality'] +
-            image_score * weights['image_analysis']
+            image_score * weights['image_analysis'] +
+            offensive_score * weights['offensive']
         )
         
         overall_score = max(
             ad_score,
             relevancy_score,
             visit_score,
-            quality_score,
             image_score,
+            offensive_score,
             overall_score  # (from weighted sum)
         )
+        # removed quality score, it is less important in general
 
         # Determine recommended action based on score thresholds
         if overall_score >= 0.7:
@@ -325,6 +348,11 @@ class ReviewAnalyzer:
                 'score': round(quality_score, 3),
                 'violations': quality_violations,
                 'weight': weights['quality']
+            },
+            'offensive': {
+                'score': round(offensive_score, 3),
+                'violations': offensive_violations,
+                'weight': weights['offensive']
             }
         }
         

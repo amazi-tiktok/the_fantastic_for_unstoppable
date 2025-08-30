@@ -407,7 +407,7 @@ def clean_illegal_chars(value):
         return re.sub(r"[\x00-\x08\x0b-\x0c\x0e-\x1f\x7f]", "", value)
     return value
 
-# Updated append function with cleaning step
+# # Updated append function with cleaning step
 def append_to_excel(batch_df):
     # Clean all string columns to remove illegal characters
     for col in batch_df.select_dtypes(include=['object']).columns:
@@ -432,37 +432,37 @@ def parse_json_file(file_path):
             return data
         return []
 
-# def main():
-#     all_files = [f for f in os.listdir(JSON_DIR) if f.endswith('.json')]
-#     processed_user_ids = get_processed_user_ids()
-#     batch = []
+def main():
+    all_files = [f for f in os.listdir(JSON_DIR) if f.endswith('.json')]
+    processed_user_ids = get_processed_user_ids()
+    batch = []
 
-#     print(f"Found {len(all_files)} JSON files to process...")
+    print(f"Found {len(all_files)} JSON files to process...")
 
-#     for file_name in all_files:
-#         file_path = os.path.join(JSON_DIR, file_name)
-#         print(f"Processing file: {file_name}")
+    for file_name in all_files:
+        file_path = os.path.join(JSON_DIR, file_name)
+        print(f"Processing file: {file_name}")
 
-#         records = parse_json_file(file_path)
-#         for record in records:
-#             if record['user_id'] in processed_user_ids:
-#                 continue
+        records = parse_json_file(file_path)
+        for record in records:
+            if record['user_id'] in processed_user_ids:
+                continue
 
-#             batch.append(record)
-#             processed_user_ids.add(record['user_id'])
+            batch.append(record)
+            processed_user_ids.add(record['user_id'])
 
-#             if len(batch) >= BATCH_SIZE:
-#                 batch_df = pd.DataFrame(batch)
-#                 append_to_excel(batch_df)
-#                 print(f"Saved batch of {len(batch)} records to Excel.")
-#                 batch = []
+            if len(batch) >= BATCH_SIZE:
+                batch_df = pd.DataFrame(batch)
+                append_to_excel(batch_df)
+                print(f"Saved batch of {len(batch)} records to Excel.")
+                batch = []
 
-#     if batch:  # Save remaining records
-#         batch_df = pd.DataFrame(batch)
-#         append_to_excel(batch_df)
-#         print(f"Saved final batch of {len(batch)} records to Excel.")
+    if batch:  # Save remaining records
+        batch_df = pd.DataFrame(batch)
+        append_to_excel(batch_df)
+        print(f"Saved final batch of {len(batch)} records to Excel.")
 
-#     print("All files processed.")
+    print("All files processed.")
 
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    main()
