@@ -6,6 +6,8 @@ from typing import Dict, List, Tuple, Optional
 
 app = Flask(__name__)
 
+CSV_FILE = 'feedback_log.csv'
+
 class ReviewAnalyzer:
     def __init__(self):
         # Keywords for policy violation detection
@@ -407,8 +409,7 @@ def feedback():
         return jsonify({'error': 'Missing feedback or results'}), 400
 
     # Prepare row: timestamp, feedback, and each top-level key in results
-    csv_file = 'feedback_log.csv'
-    file_exists = os.path.isfile(csv_file)
+    file_exists = os.path.isfile(CSV_FILE)
 
     # Get all top-level keys in results (order is preserved in Python 3.7+)
     result_keys = list(results.keys())
@@ -417,7 +418,7 @@ def feedback():
     # Prepare row values
     row = [datetime.now().isoformat(), feedback] + [results.get(k, '') for k in result_keys]
 
-    with open(csv_file, 'a', newline='', encoding='utf-8') as f:
+    with open(CSV_FILE, 'a', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         if not file_exists:
             writer.writerow(header)
@@ -425,4 +426,7 @@ def feedback():
     return jsonify({'status': 'success'})
 
 if __name__ == '__main__':
+    # Delete the feedback_log.csv file if it exists at startup, to avoid appending data to the old file, it may end up mixing the benchmark result for different model
+    if os.path.exists(CSV_FILE):
+        os.remove(CSV_FILE)
     app.run(debug=True, host='0.0.0.0', port=5000)

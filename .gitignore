@@ -197,3 +197,4 @@ data/meta-Alabama.json.gz
 data/review-Alabama.json.gz
 data/category_reviews/*
 data/category_keywords/*
+feedback_log.csv
