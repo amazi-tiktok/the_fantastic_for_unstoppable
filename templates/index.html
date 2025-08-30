@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Review Quality Assessment System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(45deg, #2c3e50, #34495e);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+            min-height: 600px;
+        }
+        
+        .input-section {
+            padding: 30px;
+            background: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+        }
+        
+        .results-section {
+            padding: 30px;
+            background: white;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 1.1rem;
+        }
+        
+        .form-group textarea, .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+            background: white;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group textarea:focus, .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .form-group textarea {
+            height: 120px;
+            resize: vertical;
+        }
+        
+        .analyze-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .analyze-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        
+        .example-btn {
+            background: #34495e;
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-top: 10px;
+            margin-right: 10px;
+        }
+        
+        .results-container {
+            display: none;
+        }
+        
+        .results-container.show {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .overall-score {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        
+        .overall-score.approve {
+            background: linear-gradient(45deg, #00b894, #00cec9);
+        }
+        
+        .policy-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Review Quality Assessment</h1>
+            <p>ML-powered system to detect policy violations and assess review quality</p>
+        </div>
+        
+        <div class="main-content">
+            <div class="input-section">
+                <h2 style="margin-bottom: 20px; color: #2c3e50;">Input Data</h2>
+                
+                <div class="form-group">
+                    <label for="reviewData">Review Data (JSON)</label>
+                    <textarea id="reviewData" placeholder='Paste your review JSON here...'></textarea>
+                    <button class="example-btn" onclick="loadExampleReview()">Load Example</button>
+                </div>
+                
+                <div class="form-group">
+                    <label for="storeInfo">Store Information (JSON)</label>
+                    <textarea id="storeInfo" placeholder='Paste your store info JSON here...'></textarea>
+                    <button class="example-btn" onclick="loadExampleStore()">Load Example</button>
+                </div>
+                
+                <div class="form-group">
+                    <label for="gcomId">GCOM ID</label>
+                    <input type="text" id="gcomId" placeholder="Enter GCOM ID" value="GCOM_12345">
+                </div>
+                
+                <button class="analyze-btn" onclick="analyzeReview()">
+                    🚀 Analyze Review Quality
+                </button>
+            </div>
+            
+            <div class="results-section">
+                <h2 style="margin-bottom: 20px; color: #2c3e50;">Analysis Results</h2>
+                <div id="resultsContainer" class="results-container">
+                    <p style="color: #6c757d; text-align: center; padding: 40px;">
+                        Enter review and store data, then click analyze to see results.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function loadExampleReview() {
+            const exampleReview = {
+                'user_id': '101463350189962023774',
+                'name': 'Jordan Adams',
+                'time': 1627750414677,
+                'rating': 5,
+                'text': 'Cool place, great people, awesome dentist!',
+                'pics': [{
+                    'url': ['https://lh5.googleusercontent.com/p/AF1QipNq2nZC5TH4_M7h5xRAd61hoTgvY1o9lozABguI=w150-h150-k-no-p']
+                }]
+            };
+            document.getElementById('reviewData').value = JSON.stringify(exampleReview, null, 2);
+        }
+        
+        function loadExampleStore() {
+            const exampleStore = {
+                'name': 'Walgreens Pharmacy',
+                'address': 'Walgreens Pharmacy, 124 E North St, Kendallville, IN 46755',
+                'description': 'Department of the Walgreens chain providing prescription medications & other health-related items.',
+                'category': ['Pharmacy']
+            };
+            document.getElementById('storeInfo').value = JSON.stringify(exampleStore, null, 2);
+        }
+        
+        async function analyzeReview() {
+            const reviewData = document.getElementById('reviewData').value;
+            const storeInfo = document.getElementById('storeInfo').value;
+            const gcomId = document.getElementById('gcomId').value;
+            
+            if (!reviewData || !storeInfo) {
+                alert('Please enter both review data and store information');
+                return;
+            }
+            
+            try {
+                const parsedReview = JSON.parse(reviewData);
+                const parsedStore = JSON.parse(storeInfo);
+                
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        review_data: parsedReview,
+                        store_info: parsedStore,
+                        gcom_id: gcomId
+                    })
+                });
+                
+                const results = await response.json();
+                displayResults(results);
+                
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+        
+        function displayResults(results) {
+            const container = document.getElementById('resultsContainer');
+            const scoreColor = results.overall_violation_score > 0.4 ? 'remove' : 'approve';
+            
+            container.innerHTML = `
+                <div class="overall-score ${scoreColor}">
+                    <h3>Overall Assessment</h3>
+                    <div style="font-size: 2rem; font-weight: bold; margin: 10px 0;">
+                        ${(results.overall_violation_score * 100).toFixed(1)}%
+                    </div>
+                    <p>Violation Score</p>
+                    <div style="margin-top: 15px; font-size: 1.3rem; font-weight: bold;">
+                        Action: ${results.action}
+                    </div>
+                </div>
+                
+                <h3 style="margin-bottom: 20px;">Policy Analysis</h3>
+                ${Object.entries(results.policy_violations).map(([policy, data]) => `
+                    <div class="policy-section">
+                        <h4>${policy.charAt(0).toUpperCase() + policy.slice(1).replace('_', ' ')}: ${(data.score * 100).toFixed(1)}%</h4>
+                        ${data.violations.length > 0 ? 
+                            '<ul>' + data.violations.map(v => `<li>${v}</li>`).join('') + '</ul>' : 
+                            '<p style="color: green;">No violations detected</p>'
+                        }
+                    </div>
+                `).join('')}
+                
+                <div style="background: #2c3e50; color: white; padding: 15px; border-radius: 10px; margin-top: 20px;">
+                    <h4>Metadata</h4>
+                    <p><strong>GCOM ID:</strong> ${results.gcom_id}</p>
+                    <p><strong>Review Length:</strong> ${results.metadata.review_length} words</p>
+                    <p><strong>Rating:</strong> ${results.metadata.rating}/5 stars</p>
+                </div>
+            `;
+            
+            container.classList.add('show');
+        }
+        
+        // Load examples on page load
+        window.onload = function() {
+            loadExampleReview();
+            loadExampleStore();
+        };
+    </script>
+</body>
+</html>

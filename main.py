@@ -7,9 +7,9 @@
 # read the data from kagglehub, in order to have mock data
 import kagglehub
 import pandas as pd
-from detoxify import Detoxify
 import nltk
 import json
+import time
 import os
 from policy import contains_personal_info, contains_profanity,classify_review_with_image 
 
@@ -29,14 +29,16 @@ def detect_policy_violation(category, text):
     
 def main():
     # read the fake data from ./data/reviews.csv and print out the format
-    df = pd.read_csv('./data/reviews.csv')
+    df = pd.read_json('./data/category_reviews/abortion_clinic.json')
     nltk.download('stopwords')
     print('Columns:', df.columns.tolist())
 
     # get the data line by line for only the first 200 lines, call detect_policy_violation to know whether there are policy violations
     for index, row in df.iterrows():
         # print("Currently reading row", index)
-        violation = detect_policy_violation(row['category'][0], row['text'])
+        violation = detect_policy_violation("abortion_clinic", row['text'])
+        # wait a sec for rate limit
+        time.sleep(1)
         if violation:
             print(f"Row {index} violation with review text : ", row['text'], violation)
     print(os.getcwd())

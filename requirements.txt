@@ -1,6 +1,5 @@
 kagglehub
 pandas
-torch>=2.2.2
 numpy<2
 scikit-learn 
 transformers 
@@ -9,5 +8,4 @@ datasets
 tensorflow
 sentence_transformers
 tf-keras
-tensorflow-macos 
-tensorflow-metal
+flask
