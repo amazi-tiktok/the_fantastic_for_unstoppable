@@ -1,6 +1,16 @@
 # from transformers import Blip2Processor, Blip2ForConditionalGeneration
 import re
+from transformers import pipeline
 
+# change to a better model, here it is used because of desktop limitation
+classifier = pipeline("zero-shot-classification", model="typeform/distilbert-base-uncased-mnli")
+
+# const variables
+promo_keywords = [
+    'discount', 'coupon', 'promo', 'sale', 'visit www', 
+    'http', '.com', 'offer', 'deal', 'free shipping',
+    'buy now', 'limited time', 'special offer'
+]
 
 # -------------------------
 # Step 0: Heuristic checks
@@ -21,6 +31,18 @@ def contains_commercial_info(text: str) -> bool:
 def contains_profanity(text: str) -> bool:
     bad_words = ["damn", "shit", "fuck", "bitch"]
     return any(word in text.lower() for word in bad_words)
+
+def classify_review_with_category(review_text: str, store_category: str):
+    result = classifier(
+        review_text,
+        candidate_labels=[store_category, "other"],
+        hypothesis_template="This review is about {}."
+    )
+    violations = []
+    if result['scores'][0] < 0.7:
+        violations.append("Low confidence in category relevance")
+
+    return result['scores'][0], violations
 
 # -------------------------
 # Step 2: NSFW image detection

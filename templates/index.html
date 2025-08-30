@@ -461,7 +461,7 @@
                 
                 <button class="example-btn" onclick="loadExampleData()">📋 Load Example Data</button>
                 
-                <button class="analyze-btn" onclick="analyzeReview()">
+                <button class="analyze-btn" id="analyzeBtn" onclick="analyzeReview()">
                     🚀 Analyze Review Quality
                 </button>
             </div>
@@ -541,6 +541,9 @@
         }
         
         async function analyzeReview() {
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            analyzeBtn.disabled = true; // Disable button
+    
             // Collect form data
             const reviewData = {
                 name: document.getElementById('userName').value,
@@ -593,6 +596,8 @@
             } catch (error) {
                 document.getElementById('loadingIndicator').style.display = 'none';
                 alert('Error analyzing review: ' + error.message);
+            } finally {
+                analyzeBtn.disabled = false; // Re-enable button
             }
         }
         

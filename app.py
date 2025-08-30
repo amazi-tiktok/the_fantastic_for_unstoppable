@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 import re
 from datetime import datetime
-from policy import contains_commercial_info
+from policy import contains_commercial_info, classify_review_with_category
 from typing import Dict, List, Tuple, Optional
 
 app = Flask(__name__)
@@ -54,65 +54,35 @@ class ReviewAnalyzer:
         text_lower = text.lower()
         violations = []
         score = 0
-        
+
         # Check for promotional keywords
         found_keywords = []
         for keyword in self.promo_keywords:
             if keyword in text_lower:
                 found_keywords.append(keyword)
                 score += 0.3
-        
+
         if found_keywords:
             violations.append(f"Contains promotional keywords: {', '.join(found_keywords)}")
-        
+
         # Check for URLs and web references
         if contains_commercial_info(text):
             violations.append("Contains URL or website reference")
             score += 0.5
-        
+
         return min(score, 1.0), violations
-    
+
     def analyze_relevancy(self, review_text, store_info):
-        """Assess if review content is relevant to the store location"""
+        # """Assess if review content is relevant to the store category"""
         if not review_text:
             return 0.8, ["Empty review text"]
             
-        text_lower = review_text.lower()
+        # text_lower = review_text.lower()
         store_category = store_info.get('category', [''])[0].lower() if store_info.get('category') else ''
-        store_name = store_info.get('name', '').lower()
-        
-        violations = []
-        irrelevance_score = 0
-        
-        # Check for irrelevant content
-        found_irrelevant = []
-        for keyword in self.irrelevant_keywords:
-            if keyword in text_lower:
-                found_irrelevant.append(keyword)
-                irrelevance_score += 0.25
-        
-        if found_irrelevant:
-            violations.append(f"Contains irrelevant content: {', '.join(found_irrelevant)}")
-        
-        # Calculate relevance score based on store mentions
-        relevance_score = 0
-        
-        # High relevance: mentions store category or specific name
-        if store_category and store_category in text_lower:
-            relevance_score += 0.6
-        if store_name and any(word in text_lower for word in store_name.split() if len(word) > 3):
-            relevance_score += 0.6
-            
-        # Medium relevance: generic location references
-        location_words = ['place', 'here', 'location', 'store', 'business', 'shop']
-        if any(word in text_lower for word in location_words):
-            relevance_score += 0.3
-        
-        # Final irrelevance score (higher = more problematic)
-        final_score = max(0, irrelevance_score - relevance_score)
-        
-        return min(final_score, 1.0), violations
-    
+
+        score, violations = classify_review_with_category(review_text, store_category)
+        return min(score, 1.0), violations
+
     def analyze_visit_authenticity(self, review_text, rating):
         """Detect reviews from users who likely haven't visited the location"""
         if not review_text:
@@ -259,17 +229,11 @@ class ReviewAnalyzer:
                 violations.append("URL doesn't appear to point to an image file")
                 score += 0.2
             
-            # Category-specific checks based on URL patterns
-            store_category = store_info.get('category', ['Other'])[0]
-            if store_category == 'Restaurant' and any(term in url_lower for term in ['car', 'vehicle', 'electronics']):
-                violations.append(f"Image URL suggests content irrelevant to {store_category}")
-                score += 0.4
-            
         except Exception as e:
             violations.append(f"Error analyzing image URL: {str(e)}")
             score = 0.3
         
-        return min(score, 1.0), violations if violations else ["Image URL passes basic checks"]
+        return min(score, 1.0), violations
     
     def analyze_review(self, review_data, store_info):
         """Main analysis function that combines all policy checks including image analysis"""
@@ -281,6 +245,7 @@ class ReviewAnalyzer:
         # Run all policy analyses
         ad_score, ad_violations = self.analyze_advertisement(text)
         relevancy_score, relevancy_violations = self.analyze_relevancy(text, store_info)
+        print("Relevancy Score:", relevancy_score, "Violations:", relevancy_violations)
         visit_score, visit_violations = self.analyze_visit_authenticity(text, rating)
         quality_score, quality_violations = self.calculate_quality_score(review_data, store_info)
         image_score, image_violations = self.analyze_image(image_url, store_info)
@@ -352,7 +317,7 @@ class ReviewAnalyzer:
         if image_url:
             policy_violations['image_analysis'] = {
                 'score': round(image_score, 3),
-                'violations': image_violations if image_violations else ["Image URL passes basic checks"],
+                'violations': image_violations if image_violations else [],
                 'weight': weights['image_analysis']
             }
         
