@@ -87,7 +87,7 @@ def detect_insulting_content(review_text: str) -> Tuple[float, list]:
     insult_score = max(result['scores'][result['labels'].index("insulting")],
                        result['scores'][result['labels'].index("offensive")])
     violations = []
-    if insult_score > 0.5:
+    if insult_score > 0.4:
         violations.append("Review contains insulting or offensive language")
     # we normalize the score, to avoid being too sensitive, 0.5 shouldn't be flagged?
     return insult_score, violations

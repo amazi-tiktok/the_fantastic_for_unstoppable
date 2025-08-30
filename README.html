@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>The Fantastic For&colon; Review Moderation Demo</title>
+            <style>
+/* From extension vscode.github */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.vscode-dark img[src$=\#gh-light-mode-only],
+.vscode-light img[src$=\#gh-dark-mode-only],
+.vscode-high-contrast:not(.vscode-high-contrast-light) img[src$=\#gh-light-mode-only],
+.vscode-high-contrast-light img[src$=\#gh-dark-mode-only] {
+	display: none;
+}
+
+</style>
+            
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/markdown.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/highlight.css">
+<style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif;
+                font-size: 14px;
+                line-height: 1.6;
+            }
+        </style>
+        <style>
+.task-list-item {
+    list-style-type: none;
+}
+
+.task-list-item-checkbox {
+    margin-left: -20px;
+    vertical-align: middle;
+    pointer-events: none;
+}
+</style>
+<style>
+:root {
+  --color-note: #0969da;
+  --color-tip: #1a7f37;
+  --color-warning: #9a6700;
+  --color-severe: #bc4c00;
+  --color-caution: #d1242f;
+  --color-important: #8250df;
+}
+
+</style>
+<style>
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-note: #2f81f7;
+    --color-tip: #3fb950;
+    --color-warning: #d29922;
+    --color-severe: #db6d28;
+    --color-caution: #f85149;
+    --color-important: #a371f7;
+  }
+}
+
+</style>
+<style>
+.markdown-alert {
+  padding: 0.5rem 1rem;
+  margin-bottom: 16px;
+  color: inherit;
+  border-left: .25em solid #888;
+}
+
+.markdown-alert>:first-child {
+  margin-top: 0
+}
+
+.markdown-alert>:last-child {
+  margin-bottom: 0
+}
+
+.markdown-alert .markdown-alert-title {
+  display: flex;
+  font-weight: 500;
+  align-items: center;
+  line-height: 1
+}
+
+.markdown-alert .markdown-alert-title .octicon {
+  margin-right: 0.5rem;
+  display: inline-block;
+  overflow: visible !important;
+  vertical-align: text-bottom;
+  fill: currentColor;
+}
+
+.markdown-alert.markdown-alert-note {
+  border-left-color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-note .markdown-alert-title {
+  color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-important {
+  border-left-color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-important .markdown-alert-title {
+  color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-warning {
+  border-left-color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-warning .markdown-alert-title {
+  color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-tip {
+  border-left-color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-tip .markdown-alert-title {
+  color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-caution {
+  border-left-color: var(--color-caution);
+}
+
+.markdown-alert.markdown-alert-caution .markdown-alert-title {
+  color: var(--color-caution);
+}
+
+</style>
+        
+        </head>
+        <body class="vscode-body vscode-light">
+            <h1 id="the-fantastic-for-review-moderation-demo">The Fantastic For: Review Moderation Demo</h1>
+<p>This project is an <strong>AI-powered review moderation system</strong> inspired by real-world challenges on platforms like Google map, where review content must be quickly and fairly evaluated for policy violations.</p>
+<hr>
+<p><img src="file:////Users/ying-jeanne/Workspace/the_fantastic_for/output.gif" alt="Demo GIF"></p>
+<h2 id="-shining-points">🌟 Shining Points</h2>
+<ul>
+<li>
+<p><strong>Modern UI:</strong><br>
+A clean, interactive web interface built with HTML, CSS, and JavaScript, allowing users to submit reviews, see detailed moderation results, and provide feedback on the system’s accuracy.</p>
+</li>
+<li>
+<p><strong>Multi-Aspect AI Moderation:</strong><br>
+The backend uses a combination of <strong>zero-shot classification</strong>, <strong>sentiment analysis</strong>, <strong>NSFW image detection</strong>, and <strong>heuristic rules</strong> to evaluate reviews for:</p>
+<ul>
+<li>Advertisement/promotional content</li>
+<li>Relevance to the business category</li>
+<li>Visit authenticity (bot/spam detection)</li>
+<li>Review quality</li>
+<li>Offensive/insulting language</li>
+<li>Image policy violations (including NSFW and stock photo detection)</li>
+</ul>
+</li>
+<li>
+<p><strong>Zero-Shot &amp; Sentiment Models:</strong><br>
+Utilizes Hugging Face’s <code>distilbert-base-uncased-mnli</code> for semantic relevance and insult detection, and <code>distilbert-base-uncased-finetuned-sst-2-english</code> for sentiment analysis—no custom training required.</p>
+</li>
+<li>
+<p><strong>Image Moderation:</strong><br>
+Detects NSFW content and promotional/stock images using lightweight vision models.</p>
+</li>
+<li>
+<p><strong>Feedback Loop:</strong><br>
+Users can provide feedback on moderation accuracy, which is logged for future benchmarking and model improvement.</p>
+</li>
+<li>
+<p><strong>Robust Error Handling:</strong><br>
+Handles missing or malformed data gracefully, both in the backend and the UI.</p>
+</li>
+</ul>
+<hr>
+<h2 id="-how-it-works">🚀 How It Works</h2>
+<ol>
+<li><strong>User submits a review</strong> (text, star rating, optional image, and business info) via the web UI.</li>
+<li><strong>Backend (Flask) analyzes the review</strong> using a combination of:
+<ul>
+<li><strong>Zero-shot classification</strong> to check if the review is relevant to the business category/description.</li>
+<li><strong>Sentiment analysis</strong> to ensure the review’s tone matches the star rating.</li>
+<li><strong>Heuristics</strong> to catch generic, spammy, or bot-like reviews.</li>
+<li><strong>Image analysis</strong> for NSFW or promotional content.</li>
+</ul>
+</li>
+<li><strong>Results are displayed in the UI</strong> with detailed breakdowns and a recommended action (APPROVE, FLAG, REMOVE).</li>
+<li><strong>User can give feedback</strong> on the moderation result, which is stored for benchmarking.</li>
+</ol>
+<hr>
+<h2 id="️-techniques-used">🛠️ Techniques Used</h2>
+<ul>
+<li><strong>Zero-shot classification</strong> (<code>distilbert-base-uncased-mnli</code>) for semantic relevance and insult detection.</li>
+<li><strong>Sentiment analysis</strong> (<code>distilbert-base-uncased-finetuned-sst-2-english</code>) for review tone.</li>
+<li><strong>NSFW image detection</strong> (e.g., <code>Falconsai/nsfw_image_detection</code>).</li>
+<li><strong>Regex and keyword heuristics</strong> for spam, promo, and bot detection.</li>
+<li><strong>Dynamic UI</strong> with feedback buttons and real-time result display.</li>
+<li><strong>CSV logging</strong> for user feedback and moderation benchmarking.</li>
+</ul>
+<hr>
+<h2 id="-tiktok-context">🎬 TikTok Context</h2>
+<p>This project demonstrates how <strong>AI and modern web tech</strong> can be combined to build a robust, interactive moderation tool—perfect for platforms like TikTok, where content safety and user experience are critical.<br>
+The UI is designed for clarity and engagement, making it easy for both users and moderators to understand and trust the moderation process.</p>
+<hr>
+<h2 id="️-demo-screenshot">🖥️ Demo Screenshot</h2>
+<p><img src="file:////Users/ying-jeanne/Workspace/the_fantastic_for/screenshot.png" alt="UI Screenshot"><br>
+<em>The UI shows moderation results, detailed policy checks, and feedback buttons.</em></p>
+<hr>
+<h2 id="-getting-started">🏁 Getting Started</h2>
+<ol>
+<li><strong>Install dependencies:</strong><pre><code class="language-bash">pip install -r requirements.txt
+</code></pre>
+</li>
+<li><strong>Run the app:</strong><pre><code class="language-bash">python app.py
+</code></pre>
+</li>
+<li><strong>Open your browser:</strong><br>
+Go to <a href="http://localhost:5000">http://localhost:5000</a></li>
+</ol>
+<hr>
+<h2 id="-file-structure">📂 File Structure</h2>
+<ul>
+<li><code>app.py</code> — Flask backend and moderation logic</li>
+<li><code>policy.py</code> — AI and heuristic moderation functions</li>
+<li><code>templates/index.html</code> — Web UI</li>
+<li><code>feedback_log.csv</code> — Feedback log (auto-generated)</li>
+<li><code>requirements.txt</code> — Python dependencies</li>
+</ul>
+<hr>
+<h2 id="-feedback--contributions">🙌 Feedback &amp; Contributions</h2>
+<p>Feedback is logged and used to improve the moderation system.<br>
+Pull requests and suggestions are welcome!</p>
+
+            
+            
+        </body>
+        </html>

@@ -86,9 +86,9 @@ class ReviewAnalyzer:
         score, violations = classify_review_image_with_category(review_text, store_category)
 
         text_score, text_violations = classify_review_text_with_category(review_text, store_category, store_info.get('description', '').lower())
-        if text_score > score:
-            score = text_score
+        if text_score > 0.5:
             violations.extend(text_violations)
+        score += text_score
         return min(score, 1.0), violations
 
     def analyze_visit_authenticity(self, username, review_text, rating):
@@ -184,6 +184,7 @@ class ReviewAnalyzer:
     def analyze_offensive(self, review_data):
         text = review_data.get('text', '')
         offensive_score, offensive_violations = detect_insulting_content(text)
+        
         return offensive_score, offensive_violations
 
     def analyze_image(self, image_url: Optional[str], store_info: Dict) -> Tuple[float, List[str]]:

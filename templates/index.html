@@ -569,7 +569,7 @@
                 text: document.getElementById('reviewText').value,
                 rating: parseInt(document.getElementById('rating').value),
                 time: new Date(document.getElementById('reviewTime').value || new Date()).getTime(),
-                image_url: document.getElementById('imageURL').value
+                image_url: document.getElementById('imageURL').value || ''
             };
             
             const storeInfo = {
