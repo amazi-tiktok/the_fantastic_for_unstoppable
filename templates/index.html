@@ -63,6 +63,25 @@
             background: white;
             overflow-y: auto;
         }
+
+        .feedback-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 24px;
+            font-size: 1.1rem;
+            margin: 0 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .feedback-btn:hover:enabled {
+            background: #764ba2;
+        }
+        .feedback-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
         
         .section-title {
             color: #2c3e50;
@@ -600,7 +619,24 @@
                 analyzeBtn.disabled = false; // Re-enable button
             }
         }
-        
+
+        function sendFeedback(feedbackType) {
+            // Disable buttons after click
+            document.getElementById('feedback-accurate').disabled = true;
+            document.getElementById('feedback-inaccurate').disabled = true;
+
+            fetch('/feedback', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    feedback: feedbackType,
+                    results: window.lastResults
+                })
+            }).then(() => {
+                document.getElementById('feedbackThanks').style.display = 'inline';
+            });
+        }
+
         function displayResults(results) {
             const container = document.getElementById('resultsContainer');
             
@@ -636,6 +672,16 @@
                     </div>
                 `).join('')}
                 
+                <div id="feedbackSection" style="display:none; margin-top: 24px; text-align: center;">
+                    <p>Was this result accurate?</p>
+                    <div>
+                        <button id="feedback-accurate" class="feedback-btn">👍 Accurate</button>
+                        <button id="feedback-inaccurate" class="feedback-btn">👎 Not Accurate</button>
+                    </div>
+                    <div>
+                        <span id="feedbackThanks" style="display:none; margin-top: 16px; color: green; display: block;">Thank you!</span>
+                    </div>
+                </div>
                 <div class="metadata-section">
                     <h4>📊 Analysis Metadata</h4>
                     <div class="metadata-item" style="margin-bottom: 24px;">
@@ -669,6 +715,23 @@
             `;
             
             container.classList.add('show');
+            document.getElementById('feedback-accurate').onclick = function() {
+                console.log('Accurate feedback clicked');
+                sendFeedback('accurate');
+            };
+            document.getElementById('feedback-inaccurate').onclick = function() {
+                console.log('Inaccurate feedback clicked');
+                sendFeedback('inaccurate');
+            };
+
+            // Show feedback section and reset feedback state
+            document.getElementById('feedbackSection').style.display = 'block';
+            document.getElementById('feedbackThanks').style.display = 'none';
+            document.getElementById('feedback-accurate').disabled = false;
+            document.getElementById('feedback-inaccurate').disabled = false;
+
+            // Store results globally for feedback
+            window.lastResults = results;
         }
         
         // Load example data on page load

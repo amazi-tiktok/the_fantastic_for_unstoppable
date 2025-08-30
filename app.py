@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, jsonify
-import re
+import re, csv, os
 from datetime import datetime
 from policy import contains_commercial_info, classify_review_with_category, analyze_nsfw_content
 from typing import Dict, List, Tuple, Optional
@@ -227,22 +227,19 @@ class ReviewAnalyzer:
             if not has_image_ext and not any(service in url_lower for service in ['imgur', 'cloudinary', 'picsum', 'placeholder']):
                 violations.append("URL doesn't appear to point to an image file")
                 score += 0.2
+            
+            """Analyze the text for severe causes of concern."""
+            # check for image content, whether it is NSFW or not
+            nsfw_score = analyze_nsfw_content(image_url)
+            if nsfw_score > 0.5:
+                violations.append("Image content is not appropriate")
+                score += 0.8
+
         except Exception as e:
             violations.append(f"Error analyzing image URL: {str(e)}")
             score = 0.3
         
         return min(score, 1.0), violations
-
-    def analyze_severe_causes(self, image_url: Optional[str],text: str) -> Tuple[float, List[str]]:
-        """Analyze the text for severe causes of concern."""
-        score = 0.0
-        violations = []
-
-        # check for image content, whether it is NSFW or not
-        nsfw_score = analyze_nsfw_content(image_url)
-        if nsfw_score > 0.5:
-            violations.append("Image content is NSFW")
-        return min(nsfw_score, 1.0), violations
 
     def analyze_review(self, review_data, store_info):
         """Main analysis function that combines all policy checks including image analysis"""
@@ -257,39 +254,43 @@ class ReviewAnalyzer:
         visit_score, visit_violations = self.analyze_visit_authenticity(reviewer_name, text, rating)
         quality_score, quality_violations = self.calculate_quality_score(review_data, store_info)
         image_score, image_violations = self.analyze_image(image_url, store_info)
-        severe_cause_score, severe_cause_violations = self.analyze_severe_causes(image_url, text)
         # Adjust weights based on whether image is provided
         if image_url:
             # When image is provided, use these weights
             weights = {
                 'advertisement': 0.25,
-                'relevancy': 0.2, 
-                'visit_authenticity': 0.15,
+                'relevancy': 0.25, 
+                'visit_authenticity': 0.20,
                 'quality': 0.15,
-                'image_analysis': 0.1,
-                'severe_cause': 0.15
+                'image_analysis': 0.15
             }
         else:
             # When no image, redistribute the weight
             weights = {
                 'advertisement': 0.3,
-                'relevancy': 0.2, 
-                'visit_authenticity': 0.15,
-                'quality': 0.2,
-                'image_analysis': 0.0,
-                'severe_cause': 0.15
+                'relevancy': 0.25, 
+                'visit_authenticity': 0.20,
+                'quality': 0.25,
+                'image_analysis': 0.0
             }
-        
+
         overall_score = (
             ad_score * weights['advertisement'] +
             relevancy_score * weights['relevancy'] + 
             visit_score * weights['visit_authenticity'] +
             quality_score * weights['quality'] +
-            image_score * weights['image_analysis'] +
-            severe_cause_score * weights['severe_cause']
+            image_score * weights['image_analysis']
         )
         
-        overall_score = max(overall_score, severe_cause_score)
+        overall_score = max(
+            ad_score,
+            relevancy_score,
+            visit_score,
+            quality_score,
+            image_score,
+            overall_score  # (from weighted sum)
+        )
+
         # Determine recommended action based on score thresholds
         if overall_score >= 0.7:
             action = "REMOVE"
@@ -322,11 +323,6 @@ class ReviewAnalyzer:
                 'score': round(quality_score, 3),
                 'violations': quality_violations,
                 'weight': weights['quality']
-            },
-            'severe_cause': {
-                'score': round(severe_cause_score, 3),
-                'violations': severe_cause_violations,
-                'weight': weights['severe_cause']
             }
         }
         
@@ -337,7 +333,7 @@ class ReviewAnalyzer:
                 'violations': image_violations if image_violations else [],
                 'weight': weights['image_analysis']
             }
-        
+
         return {
             'overall_violation_score': round(overall_score, 3),
             'action': action,
@@ -401,6 +397,32 @@ def health_check():
         'timestamp': datetime.now().isoformat(),
         'version': '1.2.0'
     })
+
+@app.route('/feedback', methods=['POST'])
+def feedback():
+    data = request.get_json()
+    feedback = data.get('feedback')
+    results = data.get('results')
+    if not feedback or not results:
+        return jsonify({'error': 'Missing feedback or results'}), 400
+
+    # Prepare row: timestamp, feedback, and each top-level key in results
+    csv_file = 'feedback_log.csv'
+    file_exists = os.path.isfile(csv_file)
+
+    # Get all top-level keys in results (order is preserved in Python 3.7+)
+    result_keys = list(results.keys())
+    header = ['timestamp', 'feedback'] + result_keys
+
+    # Prepare row values
+    row = [datetime.now().isoformat(), feedback] + [results.get(k, '') for k in result_keys]
+
+    with open(csv_file, 'a', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        if not file_exists:
+            writer.writerow(header)
+        writer.writerow(row)
+    return jsonify({'status': 'success'})
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
