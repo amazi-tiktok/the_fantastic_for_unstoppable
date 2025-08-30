@@ -1,6 +1,10 @@
 # from transformers import Blip2Processor, Blip2ForConditionalGeneration
 import re
-from transformers import pipeline
+from transformers import pipeline,AutoImageProcessor, AutoModelForImageClassification
+import torch
+from PIL import Image
+import requests
+from io import BytesIO
 
 # change to a better model, here it is used because of desktop limitation
 classifier = pipeline("zero-shot-classification", model="typeform/distilbert-base-uncased-mnli")
@@ -72,12 +76,36 @@ def classify_review_with_category(review_text: str, store_category: str):
 # # -------------------------
 # # Step 3: CLIP-based NSFW detection
 # # -------------------------
-# def detect_nsfw_clip(image_path: str, threshold: float = 0.3) -> bool:
-#     """
-#     Returns True if the image is likely NSFW.
-#     Uses CLIP similarity between image and textual prompts.
-#     """
-#     image = Image.open(image_path).convert("RGB")
+
+# Load the small NSFW detection model once (fast and light)
+nsfw_processor = AutoImageProcessor.from_pretrained("Falconsai/nsfw_image_detection")
+nsfw_model = AutoModelForImageClassification.from_pretrained("Falconsai/nsfw_image_detection")
+
+def analyze_nsfw_content(image_path_or_url: str, threshold: float = 0.5) -> bool:
+    """
+    Returns True if the image is likely NSFW.
+    Uses a small, efficient image classification model.
+    """
+    if image_path_or_url.startswith('http://') or image_path_or_url.startswith('https://'):
+        response = requests.get(image_path_or_url)
+        response.raise_for_status()
+        image = Image.open(BytesIO(response.content)).convert("RGB")
+    else:
+        image = Image.open(image_path_or_url).convert("RGB")
+    inputs = nsfw_processor(images=image, return_tensors="pt")
+    
+    with torch.no_grad():
+        outputs = nsfw_model(**inputs)
+        logits = outputs.logits
+        probs = torch.softmax(logits, dim=1)
+        nsfw_prob = probs[0][1].item()  # Index 1 is NSFW, 0 is SFW
+    
+    violation = []
+    if nsfw_prob > threshold:
+        violation.append("Image content is NSFW")
+    
+    return nsfw_prob, violation
+
 #     inputs = processor(text=nsfw_prompts + safe_prompts, images=image, return_tensors="pt", padding=True)
     
 #     with torch.no_grad():

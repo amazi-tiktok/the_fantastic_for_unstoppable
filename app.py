@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 import re
 from datetime import datetime
-from policy import contains_commercial_info, classify_review_with_category
+from policy import contains_commercial_info, classify_review_with_category, analyze_nsfw_content
 from typing import Dict, List, Tuple, Optional
 
 app = Flask(__name__)
@@ -228,7 +228,13 @@ class ReviewAnalyzer:
             if not has_image_ext and not any(service in url_lower for service in ['imgur', 'cloudinary', 'picsum', 'placeholder']):
                 violations.append("URL doesn't appear to point to an image file")
                 score += 0.2
-            
+
+            # check for image content, whether it is NSFW or not
+            nsfw_score, nsfw_violations = analyze_nsfw_content(image_url)
+            if nsfw_score > 0.5:
+                violations.append("Image content is NSFW")
+                score += 0.8
+
         except Exception as e:
             violations.append(f"Error analyzing image URL: {str(e)}")
             score = 0.3
