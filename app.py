@@ -83,45 +83,43 @@ class ReviewAnalyzer:
         score, violations = classify_review_with_category(review_text, store_category)
         return min(score, 1.0), violations
 
-    def analyze_visit_authenticity(self, review_text, rating):
+    def analyze_visit_authenticity(self, username, review_text, rating):
         """Detect reviews from users who likely haven't visited the location"""
         if not review_text:
             return 0.5, ["Empty review - cannot verify visit"]
             
-        text_lower = review_text.lower()
         violations = []
-        suspicion_score = 0
-        
-        # Check for explicit non-visit indicators
-        non_visit_found = []
-        for indicator in self.non_visit_indicators:
-            if indicator in text_lower:
-                non_visit_found.append(indicator)
-                suspicion_score += 0.7
-        
-        if non_visit_found:
-            violations.append(f"Explicit non-visit indicators: {', '.join(non_visit_found)}")
-        
-        # Check for visit evidence (reduces suspicion)
-        visit_evidence = sum(1 for indicator in self.visit_indicators if indicator in text_lower)
-        
-        # Suspicious patterns
-        word_count = len(text_lower.split())
-        
-        # Long negative review with no visit evidence
-        if rating <= 2 and visit_evidence == 0 and word_count > 15:
-            violations.append("Lengthy negative review with no evidence of actual visit")
-            suspicion_score += 0.5
-        
-        # Very short reviews are less suspicious for high ratings
-        if rating >= 4 and word_count <= 10:
-            suspicion_score *= 0.3
-        
-        # Visit evidence reduces suspicion
-        if visit_evidence > 0:
-            suspicion_score *= max(0.2, 1 - (visit_evidence * 0.3))
-        
-        return min(suspicion_score, 1.0), violations
+        score = 0.0
+
+        # 1. Generic or repetitive text
+        generic_phrases = [
+            "great place", "nice service", "good experience", "highly recommend",
+            "will come again", "very satisfied", "excellent", "awesome"
+        ]
+        text_lower = review_text.lower()
+        is_generic = any(phrase in text_lower for phrase in generic_phrases)
+        if is_generic:
+            violations.append("Generic or template-like review text")
+            score += 0.3
+
+        # 2. Username pattern (random string or numbers)
+        if username and re.match(r'^[a-zA-Z0-9]{8,}$', username):
+            violations.append("Suspicious username pattern")
+            score += 0.2
+
+        # 5. Excessive punctuation or emojis (often used by bots)
+        if review_text.count("!") > 3 or review_text.count("😊") > 2:
+            violations.append("Excessive punctuation or emojis")
+            score += 0.1
+
+        # 6. Very short or very long reviews
+        word_count = len(review_text.split())
+        if word_count < 3 or word_count > 200:
+            violations.append("Unusual review length")
+            score += 0.1
+
+        return min(score, 1.0), violations
+
     
     def calculate_quality_score(self, review_data, store_info):
         """Assess overall review quality"""
@@ -256,7 +254,7 @@ class ReviewAnalyzer:
         # Run all policy analyses
         ad_score, ad_violations = self.analyze_advertisement(text)
         relevancy_score, relevancy_violations = self.analyze_relevancy(text, store_info)
-        visit_score, visit_violations = self.analyze_visit_authenticity(text, rating)
+        visit_score, visit_violations = self.analyze_visit_authenticity(reviewer_name, text, rating)
         quality_score, quality_violations = self.calculate_quality_score(review_data, store_info)
         image_score, image_violations = self.analyze_image(image_url, store_info)
         severe_cause_score, severe_cause_violations = self.analyze_severe_causes(image_url, text)
@@ -266,20 +264,20 @@ class ReviewAnalyzer:
             weights = {
                 'advertisement': 0.25,
                 'relevancy': 0.2, 
-                'visit_authenticity': 0.1,
+                'visit_authenticity': 0.15,
                 'quality': 0.15,
                 'image_analysis': 0.1,
-                'severe_cause': 0.2
+                'severe_cause': 0.15
             }
         else:
             # When no image, redistribute the weight
             weights = {
                 'advertisement': 0.3,
                 'relevancy': 0.2, 
-                'visit_authenticity': 0.05,
+                'visit_authenticity': 0.15,
                 'quality': 0.2,
                 'image_analysis': 0.0,
-                'severe_cause': 0.25
+                'severe_cause': 0.15
             }
         
         overall_score = (
