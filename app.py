@@ -79,16 +79,17 @@ class ReviewAnalyzer:
         # """Assess if review content is relevant to the store category"""
         if not review_text:
             return 0.8, ["Empty review text"]
-            
+        violations = []
         store_category = store_info.get('category', [''])[0].lower() if store_info.get('category') else ''
         if store_category.strip() == 'others':
-            return 0, []
+            return 0, violations
         score, violations = classify_review_image_with_category(review_text, store_category)
-
+        if score > 0.4:
+            violations.extend(violations)
         text_score, text_violations = classify_review_text_with_category(review_text, store_category, store_info.get('description', '').lower())
-        if text_score > 0.5:
+        if text_score > 0.4:
             violations.extend(text_violations)
-        score += text_score
+        score += text_score/1.2
         return min(score, 1.0), violations
 
     def analyze_visit_authenticity(self, username, review_text, rating):
