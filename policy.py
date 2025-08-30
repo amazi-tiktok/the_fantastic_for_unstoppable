@@ -103,23 +103,23 @@ def contains_profanity(text: str) -> bool:
 # -------------------------
 # Step 2: Load text classifier (Mistral-7B-Instruct)
 # -------------------------
-classifier_model_id = "mistralai/Mistral-7B-Instruct-v0.2"
-tokenizer = AutoTokenizer.from_pretrained(classifier_model_id)
-classifier_model = AutoModelForCausalLM.from_pretrained(
-    classifier_model_id,
-    device_map="auto",
-    dtype="auto"
-)
-
-classifier_pipeline = pipeline(
-    "text-generation",
-    model=classifier_model,
-    tokenizer=tokenizer,
-    max_new_tokens=128,
-    temperature=0.05
-)
-
 def classify_review_with_image(business_category: str, review: str) -> str:
+    classifier_model_id = "mistralai/Mistral-7B-Instruct-v0.2"
+    tokenizer = AutoTokenizer.from_pretrained(classifier_model_id)
+    classifier_model = AutoModelForCausalLM.from_pretrained(
+        classifier_model_id,
+        device_map="auto",
+        dtype="auto"
+    )
+
+    classifier_pipeline = pipeline(
+        "text-generation",
+        model=classifier_model,
+        tokenizer=tokenizer,
+        max_new_tokens=128,
+        temperature=0.05
+    )
+
     # caption = get_image_caption(image_path)
 
     prompt = f"""
