@@ -85,6 +85,8 @@ The UI is designed for clarity and engagement, making it easy for both users and
 3. **Open your browser:**  
    Go to [http://localhost:5000](http://localhost:5000)
 
+4. **It is possible to use through API:**
+   The API is documented in file ./api_documentation.md
 ---
 
 ## 📂 File Structure
