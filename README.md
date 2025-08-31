@@ -97,6 +97,7 @@ The UI is designed for clarity and engagement, making it easy for both users and
 - `templates/index.html` — Web UI
 - `feedback_log.csv` — Feedback log (auto-generated)
 - `requirements.txt` — Python dependencies
+- `api_documentation.md` - API documents for endpoints
 
 ---
 
