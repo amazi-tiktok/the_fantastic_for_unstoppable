@@ -1,0 +1,151 @@
+<svg width="1200" height="600" viewBox="0 0 1200 600" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f3460;stop-opacity:1" />
+      <stop offset="30%" style="stop-color:#16537e;stop-opacity:1" />
+      <stop offset="70%" style="stop-color:#1e3799;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8e44ad;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="codeGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00ff88;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00d4ff;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Neon glow effect -->
+    <filter id="neonGlow">
+      <feGaussianBlur stdDeviation="5" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Drop shadow -->
+    <filter id="dropshadow">
+      <feDropShadow dx="4" dy="4" stdDeviation="4" flood-opacity="0.4"/>
+    </filter>
+    
+    <!-- Matrix pattern -->
+    <pattern id="matrixBg" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+      <text x="5" y="15" fill="rgba(0,255,136,0.1)" font-family="monospace" font-size="10">1</text>
+      <text x="25" y="30" fill="rgba(0,255,136,0.08)" font-family="monospace" font-size="8">0</text>
+      <text x="15" y="38" fill="rgba(0,255,136,0.06)" font-family="monospace" font-size="6">1</text>
+    </pattern>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1200" height="600" fill="url(#bgGradient)"/>
+  <rect width="1200" height="600" fill="url(#matrixBg)" opacity="0.4"/>
+  
+  <!-- Terminal window -->
+  <rect x="100" y="120" width="1000" height="360" rx="20" fill="rgba(0,0,0,0.7)" stroke="rgba(0,255,136,0.4)" stroke-width="3"/>
+  
+  <!-- Terminal header -->
+  <rect x="100" y="120" width="1000" height="50" rx="20" fill="rgba(0,0,0,0.9)"/>
+  <rect x="100" y="150" width="1000" height="20" fill="rgba(0,0,0,0.9)"/>
+  
+  <!-- Terminal controls -->
+  <circle cx="140" cy="145" r="8" fill="#ff5f57"/>
+  <circle cx="165" cy="145" r="8" fill="#ffbd2e"/>
+  <circle cx="190" cy="145" r="8" fill="#28ca42"/>
+  
+  <!-- Terminal title -->
+  <text x="220" y="150" fill="rgba(255,255,255,0.8)" font-family="Monaco, monospace" font-size="14" font-weight="bold">
+    fantastic_terminal.py - Review Policy AI
+  </text>
+  
+  <!-- Main code with the joke -->
+  <g font-family="Monaco, 'Courier New', monospace" font-size="20" font-weight="500">
+    <!-- Line 1 -->
+    <text x="130" y="200" fill="rgba(255,255,255,0.4)" font-size="14">01</text>
+    <text x="160" y="200" fill="#ff6b9d" font-weight="bold">class</text>
+    <text x="230" y="200" fill="#00ff88" font-weight="bold">FantasticTeam</text>
+    <text x="360" y="200" fill="#ffffff">:</text>
+    
+    <!-- Line 2 -->
+    <text x="130" y="230" fill="rgba(255,255,255,0.4)" font-size="14">02</text>
+    <text x="180" y="230" fill="#74b9ff" font-weight="bold">def</text>
+    <text x="220" y="230" fill="#fdcb6e">solve_google_reviews</text>
+    <text x="470" y="230" fill="#ffffff">( self </text>
+    <text x="560" y="230" fill="#ffffff">):</text>
+    
+    <!-- THE MAIN JOKE LINE - highlighted -->
+    <rect x="195" y="240" width="600" height="30" fill="rgba(0,255,136,0.15)" rx="5" stroke="rgba(0,255,136,0.3)" stroke-width="1"/>
+    <text x="130" y="255" fill="rgba(255,255,255,0.4)" font-size="14">03</text>
+    <text x="200" y="265" fill="#00ff88" font-weight="bold" font-size="24" filter="url(#neonGlow)">for</text>
+    <text x="250" y="265" fill="#ffffff" font-size="22">review</text>
+    <text x="335" y="265" fill="#ff6b9d" font-weight="bold" font-size="22">in</text>
+    <text x="370" y="265" fill="#ffffff" font-size="22">google_reviews:</text>
+    
+    <!-- Line 4 -->
+    <text x="130" y="295" fill="rgba(255,255,255,0.4)" font-size="14">04</text>
+    <text x="220" y="295" fill="#ffffff">quality_check(review)</text>
+    
+    <!-- Line 5 -->
+    <text x="130" y="325" fill="rgba(255,255,255,0.4)" font-size="14">05</text>
+    <text x="220" y="325" fill="#ffffff">detect_spam(review)</text>
+
+    <!-- Line 6 -->
+    <text x="130" y="345" fill="rgba(255,255,255,0.4)" font-size="14">06</text>
+    <text x="220" y="355" fill="#ffffff">verify_authenticity(review)</text>
+    
+    <!-- Line 7 - Output -->
+    <text x="130" y="375" fill="rgba(255,255,255,0.4)" font-size="14">07</text>
+    <text x="180" y="385" fill="#00ff88" font-weight="bold">return</text>
+    <text x="260" y="385" fill="#e17055">"Unstoppable Success! 🎯"</text>
+  </g>
+  
+  <!-- Team name display -->
+  <g transform="translate(600, 500)">
+    <text x="0" y="0" text-anchor="middle" fill="white" font-family="Arial Black, sans-serif" font-size="36" font-weight="900" filter="url(#dropshadow)">
+      THE FANTASTIC 
+    </text>
+    <text x="0" y="45" text-anchor="middle" font-family="Arial Black, sans-serif" font-size="26" font-weight="900" filter="url(#dropshadow)">
+      <tspan fill="#00ff88" filter="url(#neonGlow)">FOR</tspan>
+      <tspan fill="white">: Reviews </tspan>
+    </text>
+  </g>
+  
+  <!-- Side tech icons -->
+  <g transform="translate(50, 250)">
+    <!-- AI Brain -->
+    <circle cx="25" cy="25" r="20" fill="rgba(255,107,157,0.2)" stroke="#ff6b9d" stroke-width="2"/>
+    <text x="25" y="32" text-anchor="middle" fill="#ff6b9d" font-size="20">🧠</text>
+  </g>
+  
+  <g transform="translate(1120, 250)">
+    <!-- Shield (Security) -->
+    <circle cx="25" cy="25" r="20" fill="rgba(0,255,136,0.2)" stroke="#00ff88" stroke-width="2"/>
+    <text x="25" y="32" text-anchor="middle" fill="#00ff88" font-size="20">🛡️</text>
+  </g>
+  
+  <!-- Floating particles -->
+  <g opacity="0.6">
+    <circle cx="200" cy="80" r="3" fill="#00ff88">
+      <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="800" cy="520" r="2" fill="#ff6b9d">
+      <animate attributeName="opacity" values="0.2;0.8;0.2" dur="3s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="950" cy="100" r="2.5" fill="#74b9ff">
+      <animate attributeName="opacity" values="0.4;1;0.4" dur="2.5s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="150" cy="550" r="2" fill="#fdcb6e">
+      <animate attributeName="opacity" values="0.5;1;0.5" dur="1.8s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+  
+  <!-- Corner brackets for tech aesthetic -->
+  <g stroke="rgba(0,255,136,0.6)" stroke-width="3" fill="none">
+    <!-- Top left -->
+    <path d="M 100 140 L 100 120 L 120 120"/>
+    <!-- Top right -->
+    <path d="M 1080 120 L 1100 120 L 1100 140"/>
+    <!-- Bottom left -->
+    <path d="M 120 480 L 100 480 L 100 460"/>
+    <!-- Bottom right -->
+    <path d="M 1100 460 L 1100 480 L 1080 480"/>
+  </g>
+</svg>
