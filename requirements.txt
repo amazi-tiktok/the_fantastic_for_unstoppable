@@ -9,3 +9,4 @@ tensorflow
 sentence_transformers
 tf-keras
 flask
+gunicorn

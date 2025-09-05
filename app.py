@@ -83,9 +83,9 @@ class ReviewAnalyzer:
         store_category = store_info.get('category', [''])[0].lower() if store_info.get('category') else ''
         if store_category.strip() == 'others':
             return 0, violations
-        score, violations = classify_review_image_with_category(review_text, store_category)
+        score, image_violations = classify_review_image_with_category(review_text, store_category)
         if score > 0.4:
-            violations.extend(violations)
+            violations.extend(image_violations)
         text_score, text_violations = classify_review_text_with_category(review_text, store_category, store_info.get('description', '').lower())
         if text_score > 0.4:
             violations.extend(text_violations)
