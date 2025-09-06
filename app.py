@@ -85,12 +85,12 @@ class ReviewAnalyzer:
         if store_category.strip() == 'others':
             return 0, violations
         score, image_violations = classify_review_image_with_category(review_text, store_category)
-        if score > 0.4:
+        if score > 0.5:
             violations.extend(image_violations)
         text_score, text_violations = classify_review_text_with_category(review_text, store_category, store_info.get('description', '').lower())
-        if text_score > 0.4:
+        if text_score > 0.5:
             violations.extend(text_violations)
-        score += text_score/1.2
+        score = score/2 + text_score/2
         return min(score, 1.0), violations
 
     def analyze_visit_authenticity(self, username, review_text, rating):
