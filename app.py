@@ -7,7 +7,7 @@ from typing import Dict, List, Tuple, Optional
 
 app = Flask(__name__)
 
-port = os.environ.get('PORT', 4000)
+port = int(os.environ.get('PORT', 10000))
 CSV_FILE = 'feedback_log.csv'
 
 class ReviewAnalyzer:
@@ -465,4 +465,4 @@ if __name__ == '__main__':
     # Delete the feedback_log.csv file if it exists at startup, to avoid appending data to the old file, it may end up mixing the benchmark result for different model
     if os.path.exists(CSV_FILE):
         os.remove(CSV_FILE)
-    app.run(debug=True, host='0.0.0.0', port=port)
+    app.run(debug=False, host='0.0.0.0', port=port)
